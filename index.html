@@ -1,0 +1,1205 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>화학 블럭 프로토타입</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: 실험실 계기판 — 왼쪽 반응 용기(보드), 오른쪽 계측 패널. 단일 다크 테마(의도적). */
+:root{
+  --bg:#0E1220; --well:#090C16; --panel:#151A2B; --line:#252C44; --fg:#EDEAE0; --dim:#8D93A8;
+  --heat:#FF7A2F; --volt:#F2E15B; --aqua:#3E9BEB; --chip:#3F8CFF; --good:#7BD88F; --violet:#C9B6FF;
+  --display:'Do Hyeon','IBM Plex Sans KR',sans-serif;
+  --body:'IBM Plex Sans KR','Noto Sans KR',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--volt);outline-offset:2px}
+.app{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-size:28px;line-height:1;letter-spacing:.5px}
+.logo small{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:1px;margin-left:8px;vertical-align:middle}
+.hbtn{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:6px 12px;font-size:13px}
+.hbtn:hover{color:var(--fg);border-color:var(--dim)}
+.lineBtn b{font-family:var(--mono);color:var(--good)}
+.lineBtn[aria-pressed="false"]{border-color:#5A3420;color:var(--heat)}
+.lineBtn[aria-pressed="false"] b{color:var(--heat)}
+.stage{display:flex;gap:18px;align-items:flex-start;justify-content:center}
+.boardcol{display:flex;flex-direction:column;gap:8px;align-items:center}
+.well{position:relative;border:2px solid var(--line);border-radius:4px;background:var(--well);line-height:0;box-shadow:0 0 0 6px #0B0F1B,0 20px 50px rgba(0,0,0,.45)}
+.keys{font-size:12px;color:var(--dim);text-align:center;max-width:420px;line-height:1.6}
+.keys kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--fg)}
+.side{width:310px;display:flex;flex-direction:column;gap:10px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lbl{font-size:11px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;font-weight:600}
+.row2{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.big{font-family:var(--mono);font-weight:700;font-size:30px;font-variant-numeric:tabular-nums;line-height:1}
+.mid{font-family:var(--mono);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:#0B0F1B;border-radius:4px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%;width:0;background:var(--good);transition:width .25s}
+.bar.time i{background:var(--aqua);transition:none}
+.bar.time.low i{background:var(--heat)}
+.status{font-size:12px;color:var(--dim)}
+.status.hot{color:var(--volt)}
+.cm{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;position:relative}
+.cm .c,.cm .m{border-radius:8px;padding:8px 10px;text-align:center;font-family:var(--mono);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums}
+.cm .c{background:var(--chip);color:#fff}
+.cm .m{background:var(--heat);color:#1A0E05}
+.cm .x{font-family:var(--display);font-size:22px;color:var(--dim)}
+.cm.idle .c,.cm.idle .m{opacity:.45}
+.cm small{display:block;font-family:var(--body);font-size:10px;font-weight:600;letter-spacing:1px;opacity:.85}
+.gain{position:absolute;right:0;top:-26px;font-family:var(--mono);font-weight:700;font-size:20px;color:var(--good);opacity:0;pointer-events:none}
+.gain.pop{animation:pop 1.4s ease-out}
+@keyframes pop{0%{opacity:0;transform:translateY(8px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.15)}70%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.nextrow{display:flex;gap:12px;align-items:center}
+#next{width:80px;height:80px;background:var(--well);border-radius:8px;border:1px solid var(--line);flex:none}
+.nextinfo{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile{display:inline-flex;justify-content:center;align-items:center;border-radius:4px;font-family:var(--mono);font-weight:700;color:#14110C}
+.slots{display:flex;flex-direction:column;gap:6px}
+.slot{border:1px dashed var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--dim)}
+.slot.on{border-style:solid;border-color:#3A3460;background:#1A1830;color:#C9CDD8;display:flex;flex-direction:column;gap:3px}
+.slot b{color:var(--fg)}
+.star{color:var(--volt);font-family:var(--mono);font-size:11px;margin-left:4px}
+.tchips{display:flex;gap:4px;flex-wrap:wrap}
+.tc{font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid currentColor;line-height:1.5}
+.syn{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sy{border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--dim);background:#11162A}
+.sy .h{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px}
+.sy .pips{font-family:var(--mono);font-size:11px;letter-spacing:1px}
+.sy.t1{border-color:#4D5A86;color:#C9CDD8}
+.sy.t2{border-color:var(--volt);color:var(--fg);background:#1B1C26}
+.sy .eff{line-height:1.4}
+.deckbar{height:10px}
+.deckleg{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;color:var(--dim)}
+.deckleg span{display:inline-flex;align-items:center;gap:4px}
+.deckleg i{width:9px;height:9px;border-radius:2px;display:inline-block}
+details.box summary{cursor:pointer;font-size:12px;color:var(--dim);font-weight:600;letter-spacing:1px}
+.rx{display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5}
+.rx p{color:#C9CDD8}
+.rx b{color:var(--fg)}
+.touch{display:none;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:440px;margin:0 auto}
+.touch button{height:58px;font-size:20px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--fg);touch-action:none;user-select:none;-webkit-user-select:none}
+.touch button:active{background:#222944}
+.touch button.hd{background:#2A1A10;border-color:#5A3420;color:var(--heat)}
+.touch small{display:block;font-size:10px;color:var(--dim)}
+/* overlay */
+.ov{position:fixed;inset:0;background:rgba(7,9,16,.8);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.ov[hidden]{display:none}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.toolbtn{padding-right:26px!important;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:#11162A;border:1px solid var(--line);border-left:3px solid var(--tc);border-radius:8px;padding:7px 9px;color:var(--fg);position:relative;text-align:left}
+.toolbtn:hover:not(:disabled){border-color:var(--tc)}
+.toolbtn.on{background:#22283F;border-color:var(--tc);box-shadow:0 0 0 2px var(--tc)}
+.toolbtn .tn{font-size:12.5px;font-weight:700}
+.toolbtn .tq{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--tc)}
+.toolbtn kbd{position:absolute;top:6px;right:7px;font-family:var(--mono);font-size:10px;color:var(--dim);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.item.tool{border-top:3px solid var(--tc)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;max-width:620px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.card.wide{max-width:900px}
+.card h2{font-family:var(--display);font-weight:400;font-size:38px;line-height:1.05;text-wrap:balance}
+.card h3{font-size:15px}
+.sect{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.sect>.row2 h3{font-size:16px}
+.eyebrow{font-size:12px;color:var(--heat);font-weight:700;letter-spacing:1.5px}
+.card p{line-height:1.6;color:#C9CDD8}
+.card ul{padding-left:18px;line-height:1.7;color:#C9CDD8}
+.card .dim{color:var(--dim);font-size:12.5px}
+.btnrow{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.primary{background:var(--heat);color:#1A0E05;border:0;border-radius:10px;padding:12px 20px;font-weight:700;font-size:15px}
+.primary:hover{filter:brightness(1.08)}
+.ghost{background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px}
+.ghost:hover:not(:disabled){border-color:var(--dim)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.item{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;background:#11162A}
+.item p{font-size:12.5px;flex:1}
+.item.sold{opacity:.4}
+.item button{background:#232A45;color:var(--fg);border:0;border-radius:8px;padding:8px;font-family:var(--mono);font-weight:700}
+.item button:hover:not(:disabled){background:#2E3760}
+.item.up{border-color:#6B5F2A}
+.owned{display:flex;flex-direction:column;gap:6px}
+.own{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px;color:#C9CDD8;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.own b{color:var(--fg)}
+.money{font-family:var(--mono);font-weight:700;color:var(--volt)}
+.msg{min-height:1.2em;color:var(--heat);font-size:13px}
+.ledger{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:14px}
+.ledger div{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:4px 0;gap:10px}
+.ledger div:last-child{border:0;color:var(--volt);font-weight:700}
+.legendgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center;font-size:11px;color:var(--dim)}
+.legendgrid .tile{width:100%;height:44px;font-size:14px}
+/* deck editor */
+.deck{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:8px}
+.dc{background:#0F1325;border:1px solid var(--line);border-radius:8px;height:62px;display:flex;align-items:center;justify-content:center;padding:4px;color:inherit}
+.dc:hover{border-color:var(--dim)}
+.dc.sel{border-color:var(--volt);box-shadow:0 0 0 2px rgba(242,225,91,.25)}
+.mini{display:grid;gap:2px}
+.mini i{width:10px;height:10px;border-radius:2px;display:block}
+.mini i.e{background:transparent}
+.editor{display:flex;flex-direction:column;gap:8px;background:#0F1325;border:1px solid var(--line);border-radius:10px;padding:12px}
+.editor .btnrow{justify-content:flex-start}
+.mat-btn{display:inline-flex;align-items:center;gap:6px}
+.mat-btn i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.offer{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#11162A}
+.offer .dc{width:62px;flex:none;cursor:default}
+.offer div{display:flex;flex-direction:column;gap:4px;font-size:12.5px;flex:1}
+.offer button{background:#232A45;color:var(--fg);border:0;border-radius:8px;padding:6px;font-family:var(--mono);font-weight:700}
+@media (max-width:760px){
+  .stage{flex-direction:column;align-items:center;gap:10px}
+  .side{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr;gap:8px;order:-1}
+  .side .wide{grid-column:1/-1}
+  .side .deskonly{display:none}
+  .box{padding:9px 11px;gap:6px}
+  .big{font-size:22px}
+  .cm .c,.cm .m{font-size:18px;padding:6px}
+  #next{width:56px;height:56px}
+  .keys{display:none}
+  .touch{display:grid}
+  .logo{font-size:22px}
+  .card{padding:18px}
+  .card h2{font-size:30px}
+}
+@media (hover:none){.touch{display:grid}}
+@media (prefers-reduced-motion:reduce){.gain.pop{animation-duration:.01s}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="logo">화학 블럭 퍼즐 <small>PROTOTYPE v0.3 · 가제</small></div>
+    <div style="display:flex;gap:8px">
+      <button class="hbtn lineBtn" id="lineBtn" type="button" aria-pressed="true">줄 지우기 <b>ON</b></button>
+      <button class="hbtn" id="helpBtn" type="button">규칙</button>
+      <button class="hbtn" id="pauseBtn" type="button">일시정지 (P)</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="boardcol">
+      <div class="well"><canvas id="board" aria-label="게임 보드"></canvas></div>
+      <p class="keys"><kbd>← →</kbd> 이동 · <kbd>↑</kbd>/<kbd>X</kbd> 회전 · <kbd>Z</kbd> 반대 회전 · <kbd>↓</kbd> 빠르게 · <kbd>Shift</kbd>/<kbd>Space</kbd> 즉시 낙하 · <kbd>P</kbd> 일시정지</p>
+    </div>
+
+    <aside class="side">
+      <div class="box wide">
+        <div class="row2"><span class="lbl">라운드 <span id="round">1</span></span><span class="lbl">목표 <span id="target" class="money" style="color:var(--fg)">300</span></span></div>
+        <div class="row2"><span class="big" id="score">0</span><span class="status" id="pct">0%</span></div>
+        <div class="bar"><i id="scoreBar"></i></div>
+      </div>
+      <div class="box">
+        <div class="row2"><span class="lbl">남은 시간</span><span class="mid" id="time">1:30</span></div>
+        <div class="bar time" id="timeBarWrap"><i id="timeBar"></i></div>
+        <span class="status" id="status">대기 중</span>
+      </div>
+      <div class="box">
+        <span class="lbl">다음 블럭</span>
+        <div class="nextrow"><canvas id="next" aria-label="다음 블럭"></canvas>
+          <div class="nextinfo"><span id="nextName" class="mid">-</span><span class="status" id="nextSym"></span></div></div>
+      </div>
+      <div class="box wide">
+        <div class="cm idle" id="cm">
+          <div class="c"><small>칩</small><span id="chips">0</span></div>
+          <span class="x">×</span>
+          <div class="m"><small>배수</small><span id="mult">1.0</span></div>
+          <span class="gain" id="gain"></span>
+        </div>
+      </div>
+      <div class="box wide">
+        <div class="row2"><span class="lbl">도구</span><span class="status" id="toolHint">도구를 고르고 판의 칸을 누르세요</span></div>
+        <div class="tools" id="tools"></div>
+      </div>
+      <div class="box wide">
+        <div class="row2"><span class="lbl">시너지</span><span class="status">특성 2개 · 4개에서 발동</span></div>
+        <div class="syn" id="synHud"></div>
+      </div>
+      <div class="box wide">
+        <div class="row2"><span class="lbl">촉매 <span id="slotCount">0/4</span></span><span class="mid money" id="money">$4</span></div>
+        <div class="slots" id="cats"></div>
+      </div>
+      <div class="box wide">
+        <div class="row2"><span class="lbl">블럭 덱</span><span class="status" id="deckCount">-</span></div>
+        <div class="bar deckbar" id="deckBar"></div>
+        <div class="deckleg" id="deckLeg"></div>
+      </div>
+      <details class="box deskonly">
+        <summary>반응 규칙</summary>
+        <div class="rx">
+          <p><b>마그마</b> 사라지지 않는 열원. 닿은 나무를 태우고 물을 끓여 증기로 만듦</p>
+          <p><b>불 + 나무</b> 불이 번지고, 다 타면 재가 되어 아래로 쏟아짐</p>
+          <p><b>나무 + 물</b> 블럭을 놓을 때마다 나무가 옆 물을 흡수해 자람</p>
+          <p><b>철 + 물</b> 물에 닿은 채 3턴 지나면 녹슬어 가루로 부서짐. 녹은 전기가 안 통함</p>
+          <p><b>전기</b> 닿은 철·물을 타고 퍼짐. 물은 증발, 옆 나무엔 불</p>
+          <p><b>밀도</b> 철·녹·재는 물속으로 가라앉고, 나무는 떠오름</p>
+        </div>
+      </details>
+    </aside>
+
+    <div class="touch" id="touch">
+      <button type="button" data-t="left" aria-label="왼쪽">◀</button>
+      <button type="button" data-t="rot" aria-label="회전">⟳</button>
+      <button type="button" data-t="right" aria-label="오른쪽">▶</button>
+      <button type="button" data-t="soft" aria-label="빠르게">▼<small>빠르게</small></button>
+      <button type="button" data-t="hard" class="hd" aria-label="즉시 낙하">⤓<small>즉시</small></button>
+    </div>
+  </main>
+</div>
+
+<div class="ov" id="ov"><div class="card" id="ovCard"></div></div>
+
+<script>
+(() => {
+'use strict';
+let COLS = 10, ROWS = 18, N = COLS * ROWS;
+const TICK = 55, FIRE_LIFE = 16, STEAM_LIFE = 14;
+const MAX_COLS = 14, MAX_ROWS = 24;
+const E = 0, WOOD = 1, IRON = 2, WATER = 3, FIRE = 4, ELEC = 5, ASH = 6, STEAM = 7, MAGMA = 8, RUST = 9;
+const MATS = ['wood', 'iron', 'water', 'magma', 'elec'];
+const SPECIAL = { magma: true, elec: true };
+const MAT_T = { wood: WOOD, iron: IRON, water: WATER, magma: MAGMA, elec: ELEC };
+const INFO = {
+  wood:  { name: '나무',   sym: 'C',   col: '#B0784A', note: '타는 재질 · 물을 먹고 자람' },
+  iron:  { name: '철',     sym: 'Fe',  col: '#9AA3B8', note: '전기가 통함 · 가라앉음 · 녹슮' },
+  water: { name: '물',     sym: 'H₂O', col: '#3E9BEB', note: '흐르고 빈칸을 채움' },
+  magma: { name: '마그마', sym: 'Δ',   col: '#E2552A', note: '특수 · 사라지지 않는 열원' },
+  elec:  { name: '전기',   sym: 'e⁻',  col: '#F2E15B', note: '특수 · 철·물로 퍼짐' },
+};
+const BIG = [
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  [[1,1],[1,1]],
+  [[0,1,0],[1,1,1],[0,0,0]],
+  [[0,1,1],[1,1,0],[0,0,0]],
+  [[1,1,0],[0,1,1],[0,0,0]],
+  [[1,0,0],[1,1,1],[0,0,0]],
+  [[0,0,1],[1,1,1],[0,0,0]],
+];
+const SMALL = [ [[1]], [[1,1],[0,0]], [[0,0,0],[1,1,1],[0,0,0]], [[1,1],[1,0]] ];
+
+// ---- synergy (TFT-style traits) ----
+const TRAITS = {
+  heat:  { name: '열',   col: '#FF8A4D', t: ['불이 번질 확률 30% → 50%', '불이 붙을 때마다 배수 +0.1 추가'] },
+  cond:  { name: '전도', col: '#F2E15B', t: ['감전 칸마다 칩 +5', '녹슨 철도 전기가 통함 · 감전마다 배수 +0.1 추가'] },
+  hydro: { name: '수류', col: '#5FB0F2', t: ['라운드 시작 시간 +10초', '증발 칩 2배'] },
+  grow:  { name: '생장', col: '#7BD88F', t: ['나무가 한 번에 2칸까지 자람', '나무가 자랄 때마다 배수 +0.1'] },
+  metal: { name: '금속', col: '#B3BBCD', t: ['철이 녹스는 데 3턴 → 5턴', '철이 가라앉을 때마다 배수 +0.05'] },
+  chain: { name: '연쇄', col: '#C9B6FF', t: ['줄 완성 칩 100 → 150', '줄 완성 배수 +1 추가'] },
+};
+const CATS = [
+  { id: 'accel',   name: '연소 촉진제', traits: ['heat', 'grow'],   price: 4, d: s => `나무에 불이 붙을 때마다 배수 +${(.2 * s).toFixed(1)}` },
+  { id: 'coil',    name: '구리 코일',   traits: ['cond', 'metal'],  price: 5, d: s => `감전된 칸마다 칩 +${12 * s}` },
+  { id: 'turbine', name: '증기 터빈',   traits: ['heat', 'hydro'],  price: 4, d: s => `물이 증발할 때마다 칩 +${8 * s}` },
+  { id: 'weight',  name: '무게추',      traits: ['metal', 'chain'], price: 3, d: s => `철이 물속으로 한 칸 가라앉을 때마다 칩 +${6 * s}` },
+  { id: 'amp',     name: '연쇄 증폭기', traits: ['chain'],          price: 6, d: s => `한 번의 반응에서 2줄 이상 지우면 배수 ×${1 + s}` },
+  { id: 'glass',   name: '모래시계',    traits: ['chain', 'hydro'], price: 3, d: s => `즉시 낙하할 때마다 남은 시간 +${1.5 * s}초` },
+  { id: 'fert',    name: '비료',        traits: ['grow', 'hydro'],  price: 4, d: s => `나무가 자랄 때마다 칩 +${10 * s}` },
+  { id: 'rustc',   name: '녹 수집가',   traits: ['metal', 'hydro'], price: 4, d: s => `철이 녹슬 때마다 배수 +${(.3 * s).toFixed(1)}` },
+  { id: 'volcano', name: '화산석',      traits: ['heat', 'chain'],  price: 5, d: s => `줄에 포함된 마그마 칸마다 칩 +${40 * s}` },
+  { id: 'rod',     name: '피뢰침',      traits: ['cond', 'chain'],  price: 5, d: s => `전기 한 번에 10칸 이상 감전되면 배수 +${1 * s}` },
+  { id: 'alch',    name: '재 연금술',   traits: ['heat', 'grow'],   price: 3, d: s => `재가 생길 때마다 칩 +${5 * s}` },
+  { id: 'magnet',  name: '자석',        traits: ['metal', 'cond'],  price: 4, d: s => `줄에 포함된 철 칸마다 칩 +${10 * s}` },
+  { id: 'battery', name: '축전지',      traits: ['cond'],           price: 4, d: s => `전기 블럭을 놓을 때마다 칩 +${30 * s}` },
+  { id: 'green',   name: '온실',        traits: ['grow'],           price: 4, d: s => `줄에 포함된 자란 나무 칸마다 칩 +${15 * s}` },
+];
+const TOOLS = [
+  { id: 'lighter', name: '라이터',     key: '1', pack: 3, price: 2, col: '#FF7A2F', short: '불', desc: '누른 칸에 불을 붙여요. 나무는 바로 타고, 빈칸엔 불씨가 생겨요.' },
+  { id: 'taser',   name: '전기충격기', key: '2', pack: 2, price: 3, col: '#F2E15B', short: '전기', desc: '누른 칸에 전기를 흘려요. 이어진 철·물 전체가 감전돼요.' },
+  { id: 'can',     name: '물뿌리개',   key: '3', pack: 3, price: 2, col: '#3E9BEB', short: '물', desc: '누른 칸과 양옆, 3칸에 물을 뿌려요. 막혀 있으면 그 위 빈칸에 떨어져요.' },
+];
+const TOOL_MAX = 9;
+const KIND_COL = { ignite: '#FF9A4D', shock: '#F2E15B', evap: '#CFE8FF', sink: '#B9C1D6', grow: '#7BD88F', rust: '#D9874A', ash: '#9A949F', line: '#FFFFFF', bonus: '#C9B6FF' };
+
+// ---- grid ----
+let T, L, A, F, moved;
+function alloc(c, r) { COLS = c; ROWS = r; N = c * r; T = new Uint8Array(N); L = new Int16Array(N); A = new Uint8Array(N); F = new Float32Array(N); moved = new Uint8Array(N); }
+alloc(10, 18);
+let changed = false;
+const I = (x, y) => y * COLS + x;
+
+// ---- state ----
+const S = {
+  phase: 'start', round: 1, score: 0, total: 0, target: 300, time: 90, timeMax: 90, fallMs: 800,
+  money: 4, cats: [], slots: 4, deck: [], bag: [], piece: null, next: null, cols: 10, rows: 18, lineClear: true,
+  tools: { lighter: 1, taser: 1, can: 1 }, aim: null, held: null, hover: -1, zapSeeds: [],
+  gravAcc: 0, soft: false, settle: null, tickAcc: 0, tickN: 0, last: null, shop: null, paused: false,
+};
+let TC = {};
+let floats = [], zaps = [], flashes = [], shake = 0, uidSeq = 1;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const catById = id => CATS.find(c => c.id === id);
+const star = id => { const o = S.cats.find(o => o.id === id); return o ? o.star : 0; };
+const tier = t => TC[t] >= 4 ? 2 : TC[t] >= 2 ? 1 : 0;
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rustTurns = () => tier('metal') >= 1 ? 5 : 3;
+function recalcTraits() { TC = {}; for (const k in TRAITS) TC[k] = 0; for (const o of S.cats) for (const t of catById(o.id).traits) TC[t]++; }
+let best = 0; try { best = +localStorage.getItem('chemblock-best') || 0; } catch (e) {}
+
+// ---- deck ----
+const mkCard = (shape, mat) => ({ uid: uidSeq++, shape, mat });
+function shapeM(shape) { const n = +shape.slice(1); return (shape[0] === 'B' ? BIG : SMALL)[n].map(r => r.slice()); }
+function startingDeck() {
+  return [
+    mkCard('B2', 'wood'), mkCard('B3', 'wood'), mkCard('B4', 'wood'), mkCard('B6', 'wood'), mkCard('B1', 'wood'),
+    mkCard('B0', 'iron'), mkCard('B5', 'iron'), mkCard('B6', 'iron'), mkCard('B1', 'iron'),
+    mkCard('B1', 'water'), mkCard('B2', 'water'), mkCard('B3', 'water'), mkCard('B0', 'water'),
+    mkCard('S1', 'magma'), mkCard('S0', 'magma'), mkCard('S1', 'elec'), mkCard('S2', 'elec'),
+  ];
+}
+function randomCard() {
+  const mat = MATS[Math.random() * MATS.length | 0];
+  const shape = SPECIAL[mat] ? 'S' + (Math.random() * SMALL.length | 0) : 'B' + (Math.random() * BIG.length | 0);
+  return mkCard(shape, mat);
+}
+
+// ---- pieces ----
+function rotM(m, dir) {
+  const n = m.length, r = m.map(row => row.map(() => 0));
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { if (dir > 0) r[x][n - 1 - y] = m[y][x]; else r[n - 1 - x][y] = m[y][x]; }
+  return r;
+}
+function drawPiece() {
+  if (!S.bag.length) S.bag = shuffle(S.deck.map(c => c.uid));
+  const uid = S.bag.pop(), c = S.deck.find(d => d.uid === uid) || S.deck[0];
+  let m = shapeM(c.shape); const spins = Math.random() * 4 | 0; for (let i = 0; i < spins; i++) m = rotM(m, 1);
+  return { m, mat: c.mat, x: 0, y: 0 };
+}
+function fits(m, px, py) {
+  for (let r = 0; r < m.length; r++) for (let c = 0; c < m.length; c++) {
+    if (!m[r][c]) continue;
+    const gx = px + c, gy = py + r;
+    if (gx < 0 || gx >= COLS || gy >= ROWS) return false;
+    if (gy >= 0) { const t = T[I(gx, gy)]; if (t !== E && t !== STEAM) return false; }
+  }
+  return true;
+}
+function topRow(m) { for (let r = 0; r < m.length; r++) if (m[r].some(v => v)) return r; return 0; }
+function spawn() {
+  const p = S.next; S.next = drawPiece();
+  p.x = Math.floor((COLS - p.m.length) / 2); p.y = -topRow(p.m);
+  S.piece = p; S.gravAcc = 0; S.soft = false;
+  if (!fits(p.m, p.x, p.y)) { S.piece = null; return gameOver('블럭이 천장에 닿았어요'); }
+  S.phase = 'fall'; drawNext(); renderDeckHud();
+}
+function move(d) { const p = S.piece; if (p && fits(p.m, p.x + d, p.y)) p.x += d; }
+function rotate(dir) {
+  const p = S.piece; if (!p) return; const m = rotM(p.m, dir);
+  for (const [kx, ky] of [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1]]) { if (fits(m, p.x + kx, p.y + ky)) { p.m = m; p.x += kx; p.y += ky; return; } }
+}
+function dropY(p) { let y = p.y; while (fits(p.m, p.x, y + 1)) y++; return y; }
+function hardDrop() {
+  const p = S.piece; if (!p) return;
+  p.y = dropY(p);
+  const g = star('glass'); if (g) S.time += 1.5 * g;
+  lockPiece(5);
+}
+function lockPiece(bonus) {
+  const p = S.piece; let top = false;
+  for (let r = 0; r < p.m.length; r++) for (let c = 0; c < p.m.length; c++) {
+    if (!p.m[r][c]) continue;
+    const x = p.x + c, y = p.y + r;
+    if (y < 0) { top = true; continue; }
+    const i = I(x, y); T[i] = MAT_T[p.mat]; L[i] = 0; A[i] = 0; F[i] = .5;
+  }
+  S.piece = null;
+  if (top) return gameOver('블럭이 천장에 닿았어요');
+  S.settle = { chips: bonus || 0, mult: 1, lines: 0, quiet: 0, ticks: 0, counts: {} };
+  S.phase = 'settle'; S.tickAcc = TICK;
+  const b = star('battery'); if (b && p.mat === 'elec') { S.settle.chips += 30 * b; addFloat(COLS * CS / 2, CS * 1.2, `축전지 +${30 * b}`, KIND_COL.bonus, 13); }
+  turnPass();
+}
+
+// ---- scoring events ----
+function ev(kind, i, n) {
+  const s = S.settle; if (!s) return;
+  s.counts[kind] = (s.counts[kind] || 0) + 1;
+  let c = 0, m = 0;
+  switch (kind) {
+    case 'ignite': c = 6; m = .1 + .2 * star('accel') + (tier('heat') >= 2 ? .1 : 0); break;
+    case 'shock':  c = 10 + 12 * star('coil') + (tier('cond') >= 1 ? 5 : 0); m = .1 + (tier('cond') >= 2 ? .1 : 0); break;
+    case 'evap':   c = (5 + 8 * star('turbine')) * (tier('hydro') >= 2 ? 2 : 1); break;
+    case 'sink':   c = 2 + 6 * star('weight'); m = tier('metal') >= 2 ? .05 : 0; break;
+    case 'grow':   c = 4 + 10 * star('fert'); m = tier('grow') >= 2 ? .1 : 0; break;
+    case 'rust':   c = 3; m = .3 * star('rustc'); break;
+    case 'ash':    c = 2 + 5 * star('alch'); break;
+    case 'line':   c = tier('chain') >= 1 ? 150 : 100; m = 1 + (tier('chain') >= 2 ? 1 : 0); s.lines++; break;
+    case 'bonus':  c = n || 0; break;
+  }
+  s.chips += c; s.mult = Math.round((s.mult + m) * 100) / 100;
+  if (i != null && kind !== 'line') addFloat((i % COLS + .5) * CS, ((i / COLS | 0) + .5) * CS, '+' + c, KIND_COL[kind], 12);
+  return c;
+}
+function addMult(m, label) { const s = S.settle; if (!s) return; s.mult = Math.round((s.mult + m) * 100) / 100; addFloat(COLS * CS / 2, CS * 2, label, KIND_COL.bonus, 14); }
+function addFloat(x, y, text, col, size) { if (floats.length > 60) floats.shift(); floats.push({ x, y, text, col, size, life: 1 }); }
+
+// ---- simulation ----
+function setCell(i, t, life, aux) { T[i] = t; L[i] = life || 0; A[i] = aux || 0; changed = true; }
+function swap(i, j) {
+  let t = T[i]; T[i] = T[j]; T[j] = t;
+  t = L[i]; L[i] = L[j]; L[j] = t;
+  t = A[i]; A[i] = A[j]; A[j] = t;
+  t = F[i]; F[i] = F[j]; F[j] = t;
+  moved[i] = moved[j] = 1; changed = true;
+}
+function nbrs(i) {
+  const x = i % COLS, y = i / COLS | 0, out = [];
+  if (y > 0) out.push(i - COLS); if (y < ROWS - 1) out.push(i + COLS);
+  if (x > 0) out.push(i - 1); if (x < COLS - 1) out.push(i + 1);
+  return out;
+}
+function ignite(j) { setCell(j, FIRE, FIRE_LIFE, 1); F[j] = .6; ev('ignite', j); }
+
+// once per placed block: rust and growth advance one "turn"
+function turnPass() {
+  const woods = [];
+  for (let i = 0; i < N; i++) {
+    if (T[i] === IRON && nbrs(i).some(j => T[j] === WATER)) {
+      A[i]++; F[i] = Math.max(F[i], .3);
+      if (A[i] >= rustTurns()) { setCell(i, RUST); F[i] = .7; ev('rust', i); }
+    } else if (T[i] === WOOD) woods.push(i);
+  }
+  const per = tier('grow') >= 1 ? 2 : 1;
+  for (const i of woods) {
+    let grown = 0;
+    for (const j of shuffle(nbrs(i))) {
+      if (grown >= per) break;
+      if (T[j] === WATER) { setCell(j, WOOD, 0, 2); F[j] = .7; ev('grow', j); grown++; }
+    }
+  }
+}
+
+function elecPass() {
+  const q = []; const vis = new Uint8Array(N);
+  const burn = new Set();
+  for (const i of S.zapSeeds) { if (i >= 0 && i < N && !vis[i]) { vis[i] = 1; q.push(i); if (T[i] === WOOD) burn.add(i); } }
+  S.zapSeeds = [];
+  for (let i = 0; i < N; i++) if (T[i] === ELEC && !vis[i]) { vis[i] = 1; q.push(i); }
+  if (!q.length) return;
+  const rustCond = tier('cond') >= 2;
+  const edges = [];
+  for (let h = 0; h < q.length; h++) {
+    const c = q[h];
+    for (const n of nbrs(c)) {
+      if (vis[n]) continue;
+      const t = T[n];
+      if (t === IRON || t === WATER || (rustCond && t === RUST)) { vis[n] = 1; q.push(n); edges.push([c, n]); }
+      else if (t === WOOD && !burn.has(n)) { burn.add(n); edges.push([c, n]); }
+    }
+  }
+  let shocked = 0;
+  for (const i of q) {
+    if (T[i] === ELEC) { setCell(i, E); F[i] = 1; }
+    else if (T[i] === WATER) { setCell(i, STEAM, STEAM_LIFE); F[i] = 1; ev('shock', i); shocked++; }
+    else if (T[i] === IRON || T[i] === RUST) { F[i] = 1; changed = true; ev('shock', i); shocked++; }
+    else { F[i] = 1; changed = true; }
+  }
+  for (const j of burn) if (T[j] === WOOD) ignite(j);
+  const r = star('rod'); if (r && shocked >= 10) addMult(1 * r, `피뢰침 · 배수 +${r}`);
+  zaps.push({ edges, life: 1 });
+  if (edges.length > 6 && !reduceMotion) shake = Math.min(10, shake + 3);
+}
+
+function heatPass() {
+  const pWood = tier('heat') >= 1 ? .5 : .3;
+  const src = [];
+  for (let i = 0; i < N; i++) if (T[i] === FIRE || T[i] === MAGMA) src.push(i);
+  for (const i of src) {
+    const t = T[i];
+    if (t === MAGMA) {
+      for (const j of nbrs(i)) {
+        if (T[j] === WOOD && Math.random() < pWood) ignite(j);
+        else if (T[j] === WATER && Math.random() < .3) { setCell(j, STEAM, STEAM_LIFE); ev('evap', j); }
+      }
+      continue;
+    }
+    if (t !== FIRE) continue;
+    L[i]--; changed = true;
+    let quenched = false;
+    for (const j of nbrs(i)) {
+      if (T[j] === WOOD && Math.random() < pWood) ignite(j);
+      else if (T[j] === WATER && !quenched) { setCell(j, STEAM, STEAM_LIFE); quenched = true; ev('evap', j); }
+    }
+    if (quenched || L[i] <= 0) { if (A[i]) { setCell(i, ASH); ev('ash', i); } else setCell(i, E); }
+  }
+}
+
+function flowDir(x, y) {
+  let best = 0, bestD = 99;
+  for (const d of (Math.random() < .5 ? [-1, 1] : [1, -1])) {
+    for (let k = 1; k <= 6; k++) {
+      const nx = x + d * k; if (nx < 0 || nx >= COLS) break;
+      const c = T[I(nx, y)]; if (c !== E && c !== STEAM) break;
+      if (y + 1 < ROWS) { const b = T[I(nx, y + 1)]; if (b === E || b === STEAM) { if (k < bestD) { bestD = k; best = d; } break; } }
+    }
+  }
+  return best;
+}
+
+function movePass() {
+  moved.fill(0);
+  const flip = S.tickN % 2;
+  for (let y = ROWS - 1; y >= 0; y--) {
+    for (let xx = 0; xx < COLS; xx++) {
+      const x = flip ? COLS - 1 - xx : xx, i = I(x, y);
+      if (moved[i]) continue;
+      const t = T[i];
+      if (t === WATER) {
+        if (y + 1 < ROWS) { const b = T[i + COLS]; if (b === E || b === STEAM) { swap(i, i + COLS); continue; } }
+        const d = flowDir(x, y); if (d) swap(i, i + d);
+      } else if (t === ASH || t === RUST) {
+        if (y + 1 < ROWS) {
+          const b = T[i + COLS];
+          if (b === E || b === STEAM || b === WATER) { swap(i, i + COLS); continue; }
+          for (const d of shuffle([-1, 1])) {
+            const nx = x + d; if (nx < 0 || nx >= COLS) continue;
+            if (T[I(nx, y)] === E && T[I(nx, y + 1)] === E) { swap(i, I(nx, y + 1)); break; }
+          }
+        }
+      } else if (t === IRON) {
+        if (y + 1 < ROWS && T[i + COLS] === WATER) { swap(i, i + COLS); ev('sink', i + COLS); }
+      }
+    }
+  }
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const i = I(x, y);
+      if (moved[i]) continue;
+      const t = T[i];
+      if (t === STEAM) {
+        L[i]--; changed = true;
+        if (L[i] <= 0) { setCell(i, E); continue; }
+        if (y > 0) { const a = T[i - COLS]; if (a === E || a === WATER) { swap(i, i - COLS); continue; } }
+        const d = Math.random() < .5 ? -1 : 1, nx = x + d;
+        if (nx >= 0 && nx < COLS && T[I(nx, y)] === E) swap(i, I(nx, y));
+      } else if (t === WOOD) {
+        if (y > 0 && T[i - COLS] === WATER) swap(i, i - COLS);
+      }
+    }
+  }
+}
+
+function linePass() {
+  if (!S.lineClear) return;
+  for (let y = 0; y < ROWS; y++) {
+    let ok = true;
+    for (let x = 0; x < COLS; x++) { const t = T[I(x, y)]; if (t === E || t === STEAM) { ok = false; break; } }
+    if (!ok) continue;
+    ev('line', null);
+    let mg = 0, fe = 0, gw = 0;
+    for (let x = 0; x < COLS; x++) { const i = I(x, y), t = T[i]; if (t === MAGMA) mg++; else if (t === IRON) fe++; else if (t === WOOD && A[i] === 2) gw++; }
+    let extra = 0;
+    const v = star('volcano'), mgn = star('magnet'), gr = star('green');
+    if (v && mg) extra += ev('bonus', null, 40 * v * mg);
+    if (mgn && fe) extra += ev('bonus', null, 10 * mgn * fe);
+    if (gr && gw) extra += ev('bonus', null, 15 * gr * gw);
+    addFloat(COLS * CS / 2, (y + .5) * CS, `+${tier('chain') >= 1 ? 150 : 100}${extra ? ' +' + extra : ''} · 배수 +${tier('chain') >= 2 ? 2 : 1}`, '#FFFFFF', 15);
+    flashes.push({ y, life: 1 });
+    for (const arr of [T, L, A, F]) { arr.copyWithin(COLS, 0, y * COLS); arr.fill(0, 0, COLS); }
+    changed = true;
+    if (!reduceMotion) shake = Math.min(12, shake + 5);
+  }
+}
+
+function hasActive() {
+  for (let i = 0; i < N; i++) {
+    const t = T[i];
+    if (t === FIRE || t === STEAM || t === ELEC) return true;
+    if (t === MAGMA && nbrs(i).some(j => T[j] === WOOD || T[j] === WATER)) return true;
+  }
+  return false;
+}
+function settleTick() {
+  const s = S.settle; s.ticks++; S.tickN++;
+  changed = false;
+  elecPass(); heatPass(); movePass(); linePass();
+  if (!changed && !hasActive()) s.quiet++; else s.quiet = 0;
+  if (s.quiet >= 2 || s.ticks > 700) finishSettle();
+}
+function finishSettle() {
+  const s = S.settle; let mult = s.mult;
+  const a = star('amp'); if (a && s.lines >= 2) mult = Math.round(mult * (1 + a) * 100) / 100;
+  const gain = s.chips > 0 ? Math.round(s.chips * mult) : 0;
+  S.last = { chips: s.chips, mult, gain };
+  S.settle = null;
+  if (gain > 0) {
+    S.score += gain; S.total += gain;
+    const g = $('gain'); g.textContent = '+' + fmt(gain); g.classList.remove('pop'); void g.offsetWidth; g.classList.add('pop');
+  }
+  if (S.score >= S.target) return roundClear();
+  if (S.held) return restoreHeld();
+  spawn();
+}
+
+// ---- tools ----
+function restoreHeld() {
+  const p = S.held; S.held = null;
+  let tries = 0;
+  while (!fits(p.m, p.x, p.y) && tries < 6) { p.y--; tries++; }
+  if (!fits(p.m, p.x, p.y)) return gameOver('블럭이 천장에 닿았어요');
+  S.piece = p; S.phase = 'fall'; S.gravAcc = 0;
+}
+function setAim(id) {
+  if (S.phase !== 'fall' || S.paused) return;
+  S.aim = S.aim === id || !id || S.tools[id] <= 0 ? null : id;
+  cv.style.cursor = S.aim ? 'crosshair' : '';
+  renderTools();
+}
+function useTool(id, i) {
+  if (S.phase !== 'fall' || S.paused || !S.tools[id] || i < 0 || i >= N) return;
+  const x = i % COLS, y = i / COLS | 0, tool = TOOLS.find(t => t.id === id);
+  S.held = S.piece; S.piece = null;
+  S.settle = { chips: 0, mult: 1, lines: 0, quiet: 0, ticks: 0, counts: {} };
+  S.phase = 'settle'; S.tickAcc = TICK;
+  S.tools[id]--; S.aim = null; cv.style.cursor = '';
+  if (id === 'lighter') {
+    const t = T[i];
+    if (t === WOOD) ignite(i);
+    else if (t === WATER) { setCell(i, STEAM, STEAM_LIFE); ev('evap', i); }
+    else if (t === E || t === STEAM) { setCell(i, FIRE, 10, 0); }
+    else { for (const j of nbrs(i)) if (T[j] === WOOD) ignite(j); }
+    F[i] = 1;
+  } else if (id === 'taser') {
+    if (T[i] === E || T[i] === STEAM) setCell(i, ELEC); else S.zapSeeds.push(i);
+    changed = true;
+  } else if (id === 'can') {
+    for (const cx of [x - 1, x, x + 1]) {
+      if (cx < 0 || cx >= COLS) continue;
+      for (let cy = y; cy >= 0; cy--) {
+        const j = I(cx, cy), t = T[j];
+        if (t === FIRE) { if (A[j]) setCell(j, ASH); else setCell(j, E); ev('evap', j); break; }
+        if (t === E || t === STEAM) { setCell(j, WATER); F[j] = .6; break; }
+      }
+    }
+  }
+  addFloat((x + .5) * CS, (y + .5) * CS - CS, tool.name + '!', tool.col, 14);
+  renderTools();
+}
+function buyTool(id) {
+  const t = TOOLS.find(t => t.id === id); if (!t || S.money < t.price || S.tools[id] >= TOOL_MAX) return;
+  S.money -= t.price; S.tools[id] = Math.min(TOOL_MAX, S.tools[id] + t.pack); shopMsg(''); renderInv(); renderShop();
+}
+function renderTools() {
+  $('tools').innerHTML = TOOLS.map(t => `<button type="button" class="toolbtn${S.aim === t.id ? ' on' : ''}" data-tool="${t.id}" ${S.tools[t.id] <= 0 ? 'disabled' : ''} style="--tc:${t.col}">
+    <span class="tn">${t.name}</span><span class="tq">×${S.tools[t.id]}</span><kbd>${t.key}</kbd></button>`).join('');
+  setText('toolHint', S.aim ? `${TOOLS.find(t => t.id === S.aim).name}: 판에서 칸을 누르세요 · Esc 취소` : '도구를 고르고 판의 칸을 누르세요');
+}
+
+// ---- rounds ----
+function targetFor(r) { const t = [500, 900, 1400, 2100, 3000, 4200, 6000, 8000]; return r <= t.length ? t[r - 1] : Math.round(8000 * Math.pow(1.4, r - t.length) / 100) * 100; }
+function clearGrid() { alloc(S.cols, S.rows); floats = []; zaps = []; flashes = []; resize(); }
+function newGame() {
+  uidSeq = 1;
+  Object.assign(S, { round: 1, total: 0, money: 4, cats: [], slots: 4, deck: startingDeck(), paused: false, cols: 10, rows: 18, tools: { lighter: 1, taser: 1, can: 1 }, aim: null, held: null });
+  recalcTraits(); renderInv(); startRound();
+}
+function startRound() {
+  closeOv(); clearGrid();
+  S.target = targetFor(S.round);
+  S.timeMax = S.time = Math.max(55, 90 - (S.round - 1) * 5) + (tier('hydro') >= 1 ? 10 : 0);
+  S.fallMs = Math.max(380, 800 - (S.round - 1) * 60);
+  S.score = 0; S.last = null; S.settle = null;
+  S.bag = shuffle(S.deck.map(c => c.uid));
+  S.next = drawPiece(); spawn();
+}
+function roundClear() {
+  S.phase = 'clear'; S.held = null; S.aim = null; cv.style.cursor = '';
+  const secs = Math.floor(S.time), timeBonus = Math.floor(secs / 10), interest = Math.min(5, Math.floor(S.money / 5)), base = 4;
+  S.money += base + timeBonus + interest; renderInv();
+  showOv(`
+    <p class="eyebrow">라운드 ${S.round} 클리어</p>
+    <h2>목표 달성: ${fmt(S.score)} / ${fmt(S.target)}</h2>
+    <div class="ledger">
+      <div><span>라운드 보상</span><span>$${base}</span></div>
+      <div><span>남은 시간 ${secs}초 (10초당 $1)</span><span>$${timeBonus}</span></div>
+      <div><span>이자 (보유 $5당 $1, 최대 $5)</span><span>$${interest}</span></div>
+      <div><span>현재 자금</span><span>$${S.money}</span></div>
+    </div>
+    <p class="dim">빨리 클리어할수록 남은 시간이 돈이 돼요.</p>
+    <div class="btnrow"><button class="primary" data-act="shop">상점으로 →</button></div>`);
+}
+function gameOver(reason) {
+  S.phase = 'over'; S.piece = null; S.settle = null; S.held = null; S.aim = null; cv.style.cursor = '';
+  const isBest = S.total > best;
+  if (isBest) { best = S.total; try { localStorage.setItem('chemblock-best', String(best)); } catch (e) {} }
+  showOv(`
+    <p class="eyebrow">실험 종료</p>
+    <h2>${reason}</h2>
+    <div class="ledger">
+      <div><span>도달 라운드</span><span>${S.round}</span></div>
+      <div><span>이번 라운드 점수</span><span>${fmt(S.score)} / ${fmt(S.target)}</span></div>
+      <div><span>누적 점수${isBest ? ' (최고 기록!)' : ''}</span><span>${fmt(S.total)}</span></div>
+    </div>
+    <p class="dim">최고 누적 점수 ${fmt(best)}</p>
+    <div class="btnrow"><button class="primary" data-act="restart">다시 시작</button></div>`);
+}
+
+// ---- shop ----
+const CONV_PRICE = m => SPECIAL[m] ? 3 : 1;
+const ADD_PRICE = c => SPECIAL[c.mat] ? 3 : 2;
+const SLOT_PRICE = () => S.slots === 4 ? 5 : 7;
+function rollCats() {
+  const pool = CATS.filter(c => star(c.id) < 2);
+  return shuffle(pool.slice()).slice(0, 4).map(c => ({ id: c.id, sold: false }));
+}
+function openShop() {
+  S.phase = 'shop';
+  S.shop = { cats: rollCats(), cards: [randomCard(), randomCard(), randomCard()].map(c => ({ c, sold: false })), reroll: 2, msg: '', sel: null };
+  renderShop(true);
+}
+function traitChips(ids) { return `<span class="tchips">${ids.map(t => `<span class="tc" style="color:${TRAITS[t].col}">${TRAITS[t].name}</span>`).join('')}</span>`; }
+function synHTML() {
+  return Object.keys(TRAITS).map(k => {
+    const tr = TRAITS[k], c = TC[k] || 0, tl = tier(k);
+    return `<div class="sy t${tl}"><div class="h"><span style="color:${tr.col}">${tr.name}</span><span class="pips">${c} · <span style="color:${c >= 2 ? 'var(--fg)' : 'inherit'}">2</span>/<span style="color:${c >= 4 ? 'var(--volt)' : 'inherit'}">4</span></span></div>
+      <span class="eff">(2) ${tr.t[0]}</span><span class="eff">(4) ${tr.t[1]}</span></div>`;
+  }).join('');
+}
+function miniHTML(card) {
+  const m = shapeM(card.shape), n = m.length;
+  let r0 = 9, r1 = -1, c0 = 9, c1 = -1;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (m[r][c]) { r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
+  let cells = '';
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) cells += m[r][c] ? `<i style="background:${INFO[card.mat].col}"></i>` : '<i class="e"></i>';
+  return `<span class="mini" style="grid-template-columns:repeat(${c1 - c0 + 1},10px)">${cells}</span>`;
+}
+function renderShop(top) {
+  const sh = S.shop, keep = ovCard.scrollTop;
+  const sel = S.deck.find(d => d.uid === sh.sel);
+  const counts = {}; MATS.forEach(m => counts[m] = 0); S.deck.forEach(d => counts[d.mat]++);
+  showOv(`
+    <div class="row2"><div><p class="eyebrow">라운드 ${S.round + 1} 준비</p><h2>상점</h2></div><span class="big money">$${S.money}</span></div>
+    <p class="msg">${sh.msg}</p>
+
+    <div class="sect">
+      <div class="row2"><h3>촉매</h3><span class="dim">같은 촉매를 하나 더 사면 ★2 · 특성 2개/4개에서 시너지 발동</span></div>
+      <div class="items">${sh.cats.map((o, k) => {
+        const c = catById(o.id), st = star(o.id), up = st === 1;
+        return `<div class="item${o.sold ? ' sold' : ''}${up ? ' up' : ''}">
+          <div class="row2"><h3>${c.name}${up ? '<span class="star">★1 → ★2</span>' : ''}</h3></div>
+          ${traitChips(c.traits)}
+          <p>${c.d(up ? 2 : 1)}</p>
+          <button data-act="buyCat" data-k="${k}" ${o.sold || S.money < c.price ? 'disabled' : ''}>${o.sold ? '구매함' : (up ? '강화 ' : '') + '$' + c.price}</button></div>`;
+      }).join('')}</div>
+      <div class="btnrow">
+        <button class="ghost" data-act="slot" ${S.slots >= 6 || S.money < SLOT_PRICE() ? 'disabled' : ''}>${S.slots >= 6 ? '실험대 최대 (6칸)' : `실험대 확장 ${S.slots}→${S.slots + 1}칸 $${SLOT_PRICE()}`}</button>
+        <button class="ghost" data-act="reroll" ${S.money < sh.reroll ? 'disabled' : ''}>새로고침 $${sh.reroll}</button>
+      </div>
+      <div class="owned">${S.cats.length ? S.cats.map((o, k) => { const c = catById(o.id); return `<div class="own"><span><b>${c.name}</b><span class="star">${'★'.repeat(o.star)}</span> ${traitChips(c.traits)} ${c.d(o.star)}</span><button class="ghost" data-act="sellCat" data-k="${k}">판매 $${Math.floor(c.price * o.star / 2)}</button></div>`; }).join('') : '<p class="dim">보유한 촉매가 없어요. 촉매는 라운드 내내 효과가 유지돼요.</p>'}
+        <p class="dim">실험대 ${S.cats.length}/${S.slots}칸 사용 중</p></div>
+      <div class="syn">${synHTML()}</div>
+    </div>
+
+    <div class="sect">
+      <div class="row2"><h3>도구 상점</h3><span class="dim">항상 같은 가격 · 게임 중 원할 때 사용 · 각 최대 ${TOOL_MAX}회</span></div>
+      <div class="items">${TOOLS.map(t => `<div class="item tool" style="--tc:${t.col}">
+        <div class="row2"><h3>${t.name}</h3><span class="mid" style="color:${t.col}">×${S.tools[t.id]}</span></div>
+        <p>${t.desc}</p><span class="dim">게임 중 단축키 ${t.key}</span>
+        <button data-act="buyTool" data-id="${t.id}" ${S.money < t.price || S.tools[t.id] >= TOOL_MAX ? 'disabled' : ''}>${S.tools[t.id] >= TOOL_MAX ? '가득 참' : `+${t.pack}회 $${t.price}`}</button></div>`).join('')}</div>
+    </div>
+
+    <div class="sect">
+      <div class="row2"><h3>반응 용기 확장</h3><span class="dim">현재 ${S.cols} × ${S.rows}칸 (가로 최대 ${MAX_COLS} · 세로 최대 ${MAX_ROWS})</span></div>
+      <p class="dim">세로를 늘리면 블럭을 더 쌓을 여유가 생겨요. 가로를 늘리면 반응 공간은 넓어지지만 한 줄을 채우기는 어려워져요.</p>
+      <div class="btnrow" style="justify-content:flex-start">
+        <button class="ghost" data-act="tall" ${S.rows >= MAX_ROWS || S.money < TALL_PRICE ? 'disabled' : ''}>${S.rows >= MAX_ROWS ? '세로 최대' : `세로 +2칸 (${S.rows}→${S.rows + 2}) $${TALL_PRICE}`}</button>
+        <button class="ghost" data-act="wide" ${S.cols >= MAX_COLS || S.money < WIDE_PRICE ? 'disabled' : ''}>${S.cols >= MAX_COLS ? '가로 최대' : `가로 +1칸 (${S.cols}→${S.cols + 1}) $${WIDE_PRICE}`}</button>
+      </div>
+    </div>
+
+    <div class="sect">
+      <div class="row2"><h3>블럭 덱 · ${S.deck.length}장</h3><span class="dim">${MATS.map(m => `${INFO[m].name} ${counts[m]}`).join(' · ')}</span></div>
+      <p class="dim">라운드마다 덱을 섞어서 순서대로 뽑아요. 카드를 눌러 원소를 바꾸거나, 복제하거나, 빼세요.</p>
+      <div class="deck">${S.deck.map(d => `<button type="button" class="dc${d.uid === sh.sel ? ' sel' : ''}" data-act="sel" data-k="${d.uid}" aria-label="${INFO[d.mat].name} 블럭">${miniHTML(d)}</button>`).join('')}</div>
+      ${sel ? `<div class="editor">
+        <div class="row2"><b>선택한 카드: ${INFO[sel.mat].name} 블럭</b><button class="ghost" data-act="sel" data-k="0">선택 해제</button></div>
+        <span class="dim">원소 바꾸기 (일반 $1 · 특수 $3)</span>
+        <div class="btnrow">${MATS.map(m => `<button class="ghost mat-btn" data-act="conv" data-m="${m}" ${sel.mat === m || S.money < CONV_PRICE(m) ? 'disabled' : ''}><i style="background:${INFO[m].col}"></i>${INFO[m].name} $${CONV_PRICE(m)}</button>`).join('')}</div>
+        <div class="btnrow"><button class="ghost" data-act="dup" ${S.money < 3 ? 'disabled' : ''}>복제 $3</button><button class="ghost" data-act="rm" ${S.money < 1 || S.deck.length <= 8 ? 'disabled' : ''}>덱에서 빼기 $1${S.deck.length <= 8 ? ' (최소 8장)' : ''}</button></div>
+      </div>` : ''}
+      <span class="lbl">새 블럭 카드</span>
+      <div class="offers">${sh.cards.map((o, k) => `<div class="offer${o.sold ? ' sold' : ''}" style="${o.sold ? 'opacity:.4' : ''}"><span class="dc">${miniHTML(o.c)}</span><div><b>${INFO[o.c.mat].name} 블럭</b><button data-act="addCard" data-k="${k}" ${o.sold || S.money < ADD_PRICE(o.c) ? 'disabled' : ''}>${o.sold ? '추가함' : '추가 $' + ADD_PRICE(o.c)}</button></div></div>`).join('')}</div>
+    </div>
+
+    <div class="btnrow"><button class="primary" data-act="next">라운드 ${S.round + 1} 시작 →</button></div>`, true, !top);
+  if (!top) ovCard.scrollTop = keep;
+}
+function shopMsg(m) { S.shop.msg = m; }
+const TALL_PRICE = 3, WIDE_PRICE = 5;
+function growBoard(dir) {
+  if (dir === 'tall') { if (S.rows >= MAX_ROWS || S.money < TALL_PRICE) return; S.money -= TALL_PRICE; S.rows += 2; shopMsg(`반응 용기가 ${S.cols} × ${S.rows}칸이 됐어요.`); }
+  else { if (S.cols >= MAX_COLS || S.money < WIDE_PRICE) return; S.money -= WIDE_PRICE; S.cols += 1; shopMsg(`반응 용기가 ${S.cols} × ${S.rows}칸이 됐어요.`); }
+  renderInv(); renderShop();
+}
+function buyCat(k) {
+  const o = S.shop.cats[k]; if (!o || o.sold) return; const c = catById(o.id);
+  if (S.money < c.price) return;
+  const own = S.cats.find(x => x.id === o.id);
+  if (own) { if (own.star >= 2) return; own.star = 2; shopMsg(`${c.name} ★2로 강화!`); }
+  else { if (S.cats.length >= S.slots) { shopMsg('실험대가 가득 찼어요. 촉매를 팔거나 실험대를 확장하세요.'); return renderShop(); } S.cats.push({ id: o.id, star: 1 }); shopMsg(''); }
+  S.money -= c.price; o.sold = true; recalcTraits(); renderInv(); renderShop();
+}
+function sellCat(k) { const o = S.cats[k]; if (!o) return; S.money += Math.floor(catById(o.id).price * o.star / 2); S.cats.splice(k, 1); recalcTraits(); shopMsg(''); renderInv(); renderShop(); }
+function reroll() { const sh = S.shop; if (S.money < sh.reroll) return; S.money -= sh.reroll; sh.cats = rollCats(); shopMsg(''); renderInv(); renderShop(); }
+function buySlot() { if (S.slots >= 6 || S.money < SLOT_PRICE()) return; S.money -= SLOT_PRICE(); S.slots++; shopMsg(''); renderInv(); renderShop(); }
+function selCard(uid) { S.shop.sel = S.shop.sel === uid || !uid ? null : uid; renderShop(); }
+function conv(m) { const c = S.deck.find(d => d.uid === S.shop.sel); if (!c || c.mat === m || S.money < CONV_PRICE(m)) return; S.money -= CONV_PRICE(m); c.mat = m; shopMsg(''); renderInv(); renderShop(); }
+function dup() { const c = S.deck.find(d => d.uid === S.shop.sel); if (!c || S.money < 3) return; S.money -= 3; const n = mkCard(c.shape, c.mat); S.deck.splice(S.deck.indexOf(c) + 1, 0, n); shopMsg(''); renderInv(); renderShop(); }
+function rm() { const c = S.deck.find(d => d.uid === S.shop.sel); if (!c || S.money < 1 || S.deck.length <= 8) return; S.money -= 1; S.deck.splice(S.deck.indexOf(c), 1); S.shop.sel = null; shopMsg(''); renderInv(); renderShop(); }
+function addCard(k) { const o = S.shop.cards[k]; if (!o || o.sold || S.money < ADD_PRICE(o.c)) return; S.money -= ADD_PRICE(o.c); S.deck.push(o.c); o.sold = true; shopMsg(''); renderInv(); renderShop(); }
+
+// ---- overlay ----
+const $ = id => document.getElementById(id);
+const ov = $('ov'), ovCard = $('ovCard');
+function showOv(html, wide, noFocus) {
+  ovCard.classList.toggle('wide', !!wide);
+  ovCard.innerHTML = html; ov.hidden = false;
+  if (!noFocus) { ovCard.scrollTop = 0; const p = ovCard.querySelector('.primary'); if (p) p.focus({ preventScroll: true }); }
+}
+function closeOv() { ov.hidden = true; if (document.activeElement) document.activeElement.blur(); }
+ov.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+  const a = b.dataset.act, k = +b.dataset.k;
+  if (a === 'start' || a === 'restart') newGame();
+  else if (a === 'shop') openShop();
+  else if (a === 'buyCat') buyCat(k);
+  else if (a === 'sellCat') sellCat(k);
+  else if (a === 'reroll') reroll();
+  else if (a === 'slot') buySlot();
+  else if (a === 'tall' || a === 'wide') growBoard(a);
+  else if (a === 'buyTool') buyTool(b.dataset.id);
+  else if (a === 'sel') selCard(k);
+  else if (a === 'conv') conv(b.dataset.m);
+  else if (a === 'dup') dup();
+  else if (a === 'rm') rm();
+  else if (a === 'addCard') addCard(k);
+  else if (a === 'next') { S.round++; startRound(); }
+  else if (a === 'resume') { closeOv(); S.paused = false; }
+});
+function introHTML(resume) {
+  const tiles = MATS.map(m => `<div><span class="tile" style="background:${INFO[m].col};width:100%;height:44px;font-size:14px">${INFO[m].sym}</span><div style="margin-top:4px">${INFO[m].name}</div></div>`).join('');
+  return `
+    <p class="eyebrow">PROTOTYPE v0.3 · 재미 검증용</p>
+    <h2>블럭을 쌓고, 반응을 터뜨려 점수를 폭발시키세요</h2>
+    <div class="legendgrid">${tiles}</div>
+    <ul>
+      <li>블럭은 아주 느리게 떨어지고 <b>시간 제한</b>이 흘러요. <b>↓</b> 빠르게, <b>Shift / Space</b> 즉시 낙하(칩 +5).</li>
+      <li>블럭이 놓이면 반응이 일어나요. <b>반응 중엔 시간이 멈춰요.</b></li>
+      <li><b>마그마</b>는 사라지지 않아요. 옆 나무를 태우고 물을 끓여요.</li>
+      <li>블럭을 놓을 때마다 1턴: <b>나무는 물을 먹고 자라고</b>, 물에 닿은 <b>철은 3턴 뒤 녹슬어</b> 부서져요.</li>
+      <li>점수 = <b>칩 × 배수</b>. 줄 완성은 칩 +100·배수 +1, 반응마다 더 쌓여요.</li>
+      <li><b>도구</b>: 라이터(1)·전기충격기(2)·물뿌리개(3)를 고르고 판의 칸을 누르면 그 자리에 직접 반응을 일으켜요. 처음엔 1회씩, 상점에서 더 살 수 있어요.</li>
+      <li>상점: <b>촉매</b>로 특성 시너지(롤토체스식 2/4개)를 맞추고, <b>블럭 덱</b>을 직접 편집하세요.</li>
+    </ul>
+    <p class="dim">팁: 물 위에 철 → 가라앉아 빈칸 메움 → 그 물에 전기. 마그마 옆에 나무를 두면 불길이 계속 번지고, 탄 나무는 재가 되어 쏟아져요.</p>
+    <div class="btnrow">${resume ? '<button class="primary" data-act="resume">계속하기</button>' : '<button class="primary" data-act="start">실험 시작</button>'}</div>`;
+}
+function togglePause() {
+  if (S.phase !== 'fall' && S.phase !== 'settle') return;
+  S.paused = !S.paused;
+  if (S.paused) showOv(`<p class="eyebrow">일시정지</p><h2>잠깐 멈췄어요</h2><p class="dim">시간도 멈춰 있어요.</p><div class="btnrow"><button class="primary" data-act="resume">계속하기</button></div>`);
+  else closeOv();
+}
+$('pauseBtn').addEventListener('click', togglePause);
+function syncLineBtn() {
+  const b = $('lineBtn'); b.setAttribute('aria-pressed', String(S.lineClear));
+  b.innerHTML = `줄 지우기 <b>${S.lineClear ? 'ON' : 'OFF'}</b>`;
+  b.title = S.lineClear ? '한 줄이 다 차면 지워져요' : '줄이 다 차도 지워지지 않아요. 점수는 반응으로만 얻어요';
+}
+$('lineBtn').addEventListener('click', () => {
+  S.lineClear = !S.lineClear; syncLineBtn(); $('lineBtn').blur();
+  try { localStorage.setItem('chemblock-lines', S.lineClear ? '1' : '0'); } catch (e) {}
+  addFloat(COLS * CS / 2, ROWS * CS / 2, S.lineClear ? '줄 지우기 켜짐' : '줄 지우기 꺼짐', S.lineClear ? '#7BD88F' : '#FF7A2F', 16);
+});
+try { if (localStorage.getItem('chemblock-lines') === '0') S.lineClear = false; } catch (e) {}
+syncLineBtn();
+$('helpBtn').addEventListener('click', () => {
+  if (S.phase === 'fall' || S.phase === 'settle') { S.paused = true; showOv(introHTML(true)); }
+  else if (S.phase === 'start') showOv(introHTML(false));
+});
+
+// ---- input ----
+addEventListener('keydown', e => {
+  const k = e.key, code = e.code;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' '].includes(k) && (ov.hidden || k !== ' ')) e.preventDefault();
+  if (k === 'Escape' && S.aim && ov.hidden) { setAim(null); return; }
+  if (ov.hidden && (code === 'Digit1' || code === 'Digit2' || code === 'Digit3')) { setAim(TOOLS[+code.slice(-1) - 1].id); return; }
+  if (code === 'KeyP' || k === 'Escape') { if (!ov.hidden && S.paused) { closeOv(); S.paused = false; } else togglePause(); return; }
+  if (!ov.hidden) { if (k === 'Enter' && S.phase !== 'shop') { const p = ovCard.querySelector('.primary'); if (p) { e.preventDefault(); p.click(); } } return; }
+  if (S.phase !== 'fall' || S.paused) return;
+  if (k === 'ArrowLeft') move(-1);
+  else if (k === 'ArrowRight') move(1);
+  else if (k === 'ArrowUp' || code === 'KeyX') rotate(1);
+  else if (code === 'KeyZ') rotate(-1);
+  else if (k === 'ArrowDown') S.soft = true;
+  else if ((k === 'Shift' || k === ' ') && !e.repeat) hardDrop();
+});
+addEventListener('keyup', e => { if (e.key === 'ArrowDown') S.soft = false; });
+const live = () => S.phase === 'fall' && !S.paused;
+document.querySelectorAll('#touch button').forEach(b => {
+  let rep = null, del = null;
+  const stop = () => { clearTimeout(del); clearInterval(rep); del = rep = null; if (b.dataset.t === 'soft') S.soft = false; };
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault(); if (!live()) return;
+    const t = b.dataset.t;
+    if (t === 'left' || t === 'right') { const d = t === 'left' ? -1 : 1; move(d); del = setTimeout(() => { rep = setInterval(() => live() && move(d), 70); }, 220); }
+    else if (t === 'rot') rotate(1);
+    else if (t === 'soft') S.soft = true;
+    else if (t === 'hard') hardDrop();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => b.addEventListener(n, stop));
+});
+
+// ---- rendering ----
+const cv = $('board'), ctx = cv.getContext('2d'), nx = $('next'), nctx = nx.getContext('2d');
+let CS = 30; const dpr = Math.min(2, devicePixelRatio || 1);
+function resize() {
+  const narrow = innerWidth < 760;
+  const cs = narrow ? Math.min((innerWidth - 44) / COLS, (innerHeight - 330) / ROWS) : Math.min((innerHeight - 110) / ROWS, (innerWidth - 400) / COLS, 38);
+  CS = Math.max(16, Math.floor(cs));
+  cv.width = COLS * CS * dpr; cv.height = ROWS * CS * dpr;
+  cv.style.width = COLS * CS + 'px'; cv.style.height = ROWS * CS + 'px';
+  const ns = nx.clientWidth || 80; nx.width = ns * dpr; nx.height = ns * dpr;
+  drawNext();
+}
+addEventListener('resize', resize);
+function cellAt(e) {
+  const r = cv.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / CS), y = Math.floor((e.clientY - r.top) / CS);
+  return x >= 0 && x < COLS && y >= 0 && y < ROWS ? I(x, y) : -1;
+}
+cv.addEventListener('pointermove', e => { S.hover = cellAt(e); });
+cv.addEventListener('pointerleave', () => { S.hover = -1; });
+cv.addEventListener('pointerdown', e => { if (!S.aim) return; e.preventDefault(); const i = cellAt(e); if (i >= 0) useTool(S.aim, i); });
+$('tools').addEventListener('click', e => { const b = e.target.closest('button[data-tool]'); if (!b || b.disabled) return; setAim(b.dataset.tool); b.blur(); });
+function hash(i) { let h = (i + 11) * 2654435761 >>> 0; h ^= h >>> 13; return h >>> 0; }
+function drawMat(c, px, py, s, t, i, life, aux) {
+  const g = Math.max(1, s * .06), x = px + g, y = py + g, w = s - g * 2, now = performance.now();
+  switch (t) {
+    case WOOD: {
+      c.fillStyle = aux === 2 ? '#9A7A40' : '#A8713F'; c.fillRect(x, y, w, w);
+      c.fillStyle = '#C38A55'; c.fillRect(x, y, w, w * .14);
+      c.strokeStyle = 'rgba(70,35,12,.45)'; c.lineWidth = Math.max(1, s * .05);
+      for (const f of [.4, .7]) { c.beginPath(); c.moveTo(x + w * .1, y + w * f); c.quadraticCurveTo(x + w * .5, y + w * (f - .12), x + w * .9, y + w * f); c.stroke(); }
+      if (aux === 2) { c.fillStyle = '#6FC27A'; c.beginPath(); c.ellipse(x + w * .72, y + w * .2, w * .2, w * .1, -.5, 0, 7); c.fill(); }
+      break;
+    }
+    case IRON: {
+      c.fillStyle = '#7F889E'; c.fillRect(x, y, w, w);
+      c.fillStyle = '#B8C0D2'; c.fillRect(x, y, w, w * .12); c.fillRect(x, y, w * .12, w);
+      c.fillStyle = '#545B70'; c.fillRect(x, y + w * .88, w, w * .12); c.fillRect(x + w * .88, y, w * .12, w);
+      c.fillStyle = '#5F677C';
+      for (const [a, b] of [[.28, .28], [.72, .28], [.28, .72], [.72, .72]]) { c.beginPath(); c.arc(x + w * a, y + w * b, w * .06, 0, 7); c.fill(); }
+      if (aux > 0 && i >= 0) {
+        const r = Math.min(1, aux / rustTurns()), h = hash(i);
+        c.fillStyle = `rgba(196,106,53,${.35 + .5 * r})`;
+        for (let q = 0; q < 2 + aux * 2; q++) { const a = ((h >> (q * 3)) & 7) / 8, b = ((h >> (q * 3 + 12)) & 7) / 8; c.fillRect(x + w * a * .8, y + w * b * .8, w * (.18 + .1 * r), w * (.18 + .1 * r)); }
+      }
+      break;
+    }
+    case RUST: {
+      c.fillStyle = '#8A4524'; c.fillRect(x, y, w, w);
+      const h = hash(i < 0 ? 3 : i); c.fillStyle = '#C46A35';
+      for (let q = 0; q < 5; q++) { const a = ((h >> (q * 3)) & 7) / 8, b = ((h >> (q * 3 + 14)) & 7) / 8; c.fillRect(x + w * a * .85, y + w * b * .85, w * .14, w * .14); }
+      break;
+    }
+    case WATER: {
+      c.fillStyle = 'rgba(52,140,226,.88)'; c.fillRect(px, py, s, s);
+      const above = i >= COLS ? T[i - COLS] : E;
+      if (i < 0 || above !== WATER) { const ph = now / 300 + (i % COLS); c.fillStyle = 'rgba(175,220,255,.85)'; c.fillRect(px, py + s * (.04 + .04 * Math.sin(ph)), s, s * .12); }
+      break;
+    }
+    case MAGMA: {
+      c.fillStyle = '#3A1410'; c.fillRect(x, y, w, w);
+      const gl = .6 + .4 * Math.sin(now / 380 + (i < 0 ? 0 : i));
+      const h = hash(i < 0 ? 7 : i);
+      c.strokeStyle = `rgb(255,${110 + 70 * gl | 0},40)`; c.lineWidth = Math.max(1.5, s * .09); c.lineJoin = 'round';
+      c.beginPath();
+      const p = k => ((h >> (k * 3)) & 7) / 8;
+      c.moveTo(x + w * .1, y + w * (.2 + p(0) * .5)); c.lineTo(x + w * (.35 + p(1) * .2), y + w * (.3 + p(2) * .4)); c.lineTo(x + w * .9, y + w * (.25 + p(3) * .5));
+      c.moveTo(x + w * (.35 + p(1) * .2), y + w * (.3 + p(2) * .4)); c.lineTo(x + w * (.3 + p(4) * .4), y + w * .92);
+      c.stroke();
+      c.fillStyle = `rgba(255,140,40,${.12 * gl})`; c.fillRect(x, y, w, w);
+      break;
+    }
+    case FIRE: {
+      const k = Math.random();
+      c.fillStyle = k < .5 ? '#FF5A1F' : '#FF7A2F'; c.fillRect(x, y, w, w);
+      const r = Math.max(.25, (life || 0) / FIRE_LIFE);
+      c.fillStyle = k < .3 ? '#FFE27A' : '#FFB13B';
+      const cw = w * .6 * r; c.fillRect(x + (w - cw) / 2, y + w - cw - w * .1, cw, cw);
+      break;
+    }
+    case ELEC: {
+      c.fillStyle = '#F2E15B'; c.fillRect(x, y, w, w);
+      c.strokeStyle = '#3A3206'; c.lineWidth = Math.max(1.5, s * .08); c.beginPath();
+      c.moveTo(x + w * .58, y + w * .12); c.lineTo(x + w * .3, y + w * .55); c.lineTo(x + w * .55, y + w * .5); c.lineTo(x + w * .38, y + w * .9); c.stroke();
+      break;
+    }
+    case ASH: {
+      c.fillStyle = '#5E5A63'; c.fillRect(x, y, w, w);
+      const h = hash(i); c.fillStyle = '#7D7884';
+      for (let q = 0; q < 4; q++) { const a = ((h >> (q * 4)) & 15) / 16, b = ((h >> (q * 4 + 16)) & 15) / 16; c.fillRect(x + w * a * .85, y + w * b * .85, w * .12, w * .12); }
+      break;
+    }
+    case STEAM: {
+      const a = .12 + .4 * Math.max(0, (life || 0) / STEAM_LIFE);
+      c.fillStyle = `rgba(228,236,248,${a})`; c.beginPath(); c.arc(px + s / 2, py + s / 2, s * .42, 0, 7); c.fill();
+      break;
+    }
+  }
+}
+function drawNext() {
+  if (!S.next) return;
+  const p = S.next, n = p.m.length, W = nx.width / dpr;
+  nctx.setTransform(dpr, 0, 0, dpr, 0, 0); nctx.clearRect(0, 0, W, W);
+  let r0 = 9, r1 = -1, c0 = 9, c1 = -1;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (p.m[r][c]) { r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
+  const s = Math.floor(W / 4.6), ox = (W - (c1 - c0 + 1) * s) / 2, oy = (W - (r1 - r0 + 1) * s) / 2;
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (p.m[r][c]) drawMat(nctx, ox + (c - c0) * s, oy + (r - r0) * s, s, MAT_T[p.mat], -1, FIRE_LIFE, 0);
+  setText('nextName', INFO[p.mat].name); setText('nextSym', INFO[p.mat].note);
+}
+function render(dt) {
+  const W = COLS * CS, H = ROWS * CS;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#090C16'; ctx.fillRect(0, 0, W, H);
+  let sx = 0, sy = 0;
+  if (shake > .2 && !reduceMotion) { sx = (Math.random() - .5) * shake; sy = (Math.random() - .5) * shake; }
+  shake *= Math.pow(.88, dt / 16);
+  ctx.save(); ctx.translate(sx, sy);
+  ctx.strokeStyle = 'rgba(255,255,255,.035)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = 1; x < COLS; x++) { ctx.moveTo(x * CS + .5, 0); ctx.lineTo(x * CS + .5, H); }
+  for (let y = 1; y < ROWS; y++) { ctx.moveTo(0, y * CS + .5); ctx.lineTo(W, y * CS + .5); }
+  ctx.stroke();
+  for (let i = 0; i < N; i++) {
+    const t = T[i]; if (t === E) continue;
+    const px = (i % COLS) * CS, py = (i / COLS | 0) * CS;
+    drawMat(ctx, px, py, CS, t, i, L[i], A[i]);
+    if (F[i] > 0) { ctx.fillStyle = `rgba(255,255,240,${F[i] * .55})`; ctx.fillRect(px, py, CS, CS); }
+  }
+  if (S.piece && S.phase === 'fall') {
+    const p = S.piece, gy = dropY(p), n = p.m.length;
+    ctx.strokeStyle = INFO[p.mat].col; ctx.globalAlpha = .35; ctx.lineWidth = 2;
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (p.m[r][c] && gy + r >= 0) ctx.strokeRect((p.x + c) * CS + 3, (gy + r) * CS + 3, CS - 6, CS - 6);
+    ctx.globalAlpha = 1;
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (p.m[r][c] && p.y + r >= 0) drawMat(ctx, (p.x + c) * CS, (p.y + r) * CS, CS, MAT_T[p.mat], -1, FIRE_LIFE, 0);
+  }
+  if (S.aim && S.phase === 'fall' && S.hover >= 0 && S.hover < N) {
+    const tool = TOOLS.find(t => t.id === S.aim), hx = S.hover % COLS, hy = S.hover / COLS | 0;
+    const xs = S.aim === 'can' ? [hx - 1, hx, hx + 1] : [hx];
+    ctx.strokeStyle = tool.col; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+    for (const cx of xs) if (cx >= 0 && cx < COLS) ctx.strokeRect(cx * CS + 2, hy * CS + 2, CS - 4, CS - 4);
+    ctx.setLineDash([]);
+    ctx.fillStyle = tool.col; ctx.globalAlpha = .18; ctx.fillRect(hx * CS, hy * CS, CS, CS); ctx.globalAlpha = 1;
+  }
+  for (const z of zaps) {
+    ctx.strokeStyle = `rgba(250,236,110,${z.life})`; ctx.lineWidth = 2; ctx.beginPath();
+    for (const [a, b] of z.edges) {
+      const ax = (a % COLS + .5) * CS, ay = ((a / COLS | 0) + .5) * CS, bx = (b % COLS + .5) * CS, by = ((b / COLS | 0) + .5) * CS;
+      ctx.moveTo(ax, ay); ctx.lineTo((ax + bx) / 2 + (Math.random() - .5) * CS * .5, (ay + by) / 2 + (Math.random() - .5) * CS * .5); ctx.lineTo(bx, by);
+    }
+    ctx.stroke(); z.life -= dt / 450;
+  }
+  zaps = zaps.filter(z => z.life > 0);
+  for (const f of flashes) { ctx.fillStyle = `rgba(255,255,255,${f.life * .7})`; ctx.fillRect(0, f.y * CS, W, CS); f.life -= dt / 350; }
+  flashes = flashes.filter(f => f.life > 0);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const f of floats) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5));
+    ctx.font = `700 ${f.size}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillText(f.text, f.x + 1, f.y + 1);
+    ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, f.y);
+    f.y -= dt * .03; f.life -= dt / 900;
+  }
+  ctx.globalAlpha = 1;
+  floats = floats.filter(f => f.life > 0);
+  ctx.restore();
+  for (let i = 0; i < N; i++) if (F[i] > 0) F[i] = Math.max(0, F[i] - dt / 420);
+}
+
+// ---- HUD ----
+const cache = {};
+function setText(id, v) { v = String(v); if (cache[id] !== v) { cache[id] = v; $(id).textContent = v; } }
+function setW(id, pct) { const v = Math.max(0, Math.min(100, pct)).toFixed(1) + '%'; if (cache[id] !== v) { cache[id] = v; $(id).style.width = v; } }
+function hud() {
+  setText('round', S.round); setText('target', fmt(S.target)); setText('score', fmt(S.score));
+  const pct = S.score / S.target * 100; setText('pct', Math.min(999, Math.floor(pct)) + '%'); setW('scoreBar', pct);
+  const t = Math.max(0, S.time), m = Math.floor(t / 60), sec = Math.floor(t % 60);
+  setText('time', `${m}:${String(sec).padStart(2, '0')}`); setW('timeBar', t / S.timeMax * 100);
+  $('timeBarWrap').classList.toggle('low', t < 15);
+  let st = '대기 중', hot = false;
+  if (S.paused) st = '일시정지';
+  else if (S.phase === 'settle') { st = '반응 중 · 시간 정지'; hot = true; }
+  else if (S.phase === 'fall') st = S.soft ? '빠르게 낙하 중' : '생각 중 · 시간이 흘러요';
+  else if (S.phase === 'shop') st = '상점';
+  setText('status', st); $('status').classList.toggle('hot', hot);
+  const cmEl = $('cm');
+  if (S.settle) { setText('chips', fmt(S.settle.chips)); setText('mult', S.settle.mult.toFixed(1)); cmEl.classList.remove('idle'); }
+  else if (S.last) { setText('chips', fmt(S.last.chips)); setText('mult', S.last.mult.toFixed(1)); cmEl.classList.add('idle'); }
+  else { setText('chips', '0'); setText('mult', '1.0'); cmEl.classList.add('idle'); }
+  setText('money', '$' + S.money);
+}
+function renderDeckHud() {
+  const counts = {}; MATS.forEach(m => counts[m] = 0); S.deck.forEach(d => counts[d.mat]++);
+  const tot = S.deck.length || 1;
+  $('deckBar').innerHTML = MATS.map(m => `<i style="width:${counts[m] / tot * 100}%;background:${INFO[m].col}"></i>`).join('');
+  $('deckLeg').innerHTML = MATS.map(m => `<span><i style="background:${INFO[m].col}"></i>${INFO[m].name} ${counts[m]}</span>`).join('');
+  setText('deckCount', S.deck.length ? `${S.deck.length}장 · 남은 ${S.bag.length}장` : '-');
+}
+function renderInv() {
+  const slots = [];
+  for (let k = 0; k < S.slots; k++) {
+    const o = S.cats[k];
+    if (!o) { slots.push(`<div class="slot">빈 실험대</div>`); continue; }
+    const c = catById(o.id);
+    slots.push(`<div class="slot on"><span><b>${c.name}</b><span class="star">${'★'.repeat(o.star)}</span></span>${traitChips(c.traits)}<span>${c.d(o.star)}</span></div>`);
+  }
+  $('cats').innerHTML = slots.join('');
+  setText('slotCount', `${S.cats.length}/${S.slots}`);
+  $('synHud').innerHTML = Object.keys(TRAITS).map(k => {
+    const tr = TRAITS[k], c = TC[k] || 0, tl = tier(k);
+    return `<div class="sy t${tl}" title="(2) ${tr.t[0]} · (4) ${tr.t[1]}"><div class="h"><span style="color:${tr.col}">${tr.name}</span><span class="pips">${c}/${c >= 2 ? 4 : 2}</span></div><span class="eff">${tl ? tr.t[tl - 1] : (c ? '1개 더 모으면 발동' : '비활성')}</span></div>`;
+  }).join('');
+  setText('money', '$' + S.money);
+  renderDeckHud(); renderTools();
+}
+
+// ---- loop ----
+let lastT = performance.now();
+function update(dt) {
+  if (S.paused) return;
+  if (S.phase === 'fall') {
+    S.time -= dt / 1000;
+    if (S.time <= 0) { S.time = 0; return gameOver('시간이 다 됐어요'); }
+    const iv = S.soft ? 35 : S.fallMs;
+    S.gravAcc += dt;
+    while (S.gravAcc >= iv && S.phase === 'fall') {
+      S.gravAcc -= iv;
+      const p = S.piece;
+      if (fits(p.m, p.x, p.y + 1)) p.y++; else { lockPiece(0); break; }
+    }
+  } else if (S.phase === 'settle') {
+    S.tickAcc += dt;
+    while (S.tickAcc >= TICK && S.phase === 'settle') { S.tickAcc -= TICK; settleTick(); }
+  }
+}
+function frame(now) {
+  const dt = Math.min(50, now - lastT); lastT = now;
+  update(dt); render(dt); hud();
+  requestAnimationFrame(frame);
+}
+
+// demo board behind the intro so the first frame shows the idea
+function seedDemo() {
+  const rows = ['WWW..IIWWW', 'CCWWWIICCC', 'CCCMMIIC.C', 'IIICCCCCCI', 'IIIRRWWIII'];
+  const map = { W: WATER, I: IRON, C: WOOD, M: MAGMA, R: RUST, '.': E };
+  rows.forEach((r, k) => { const y = ROWS - rows.length + k; [...r].forEach((ch, x) => { T[I(x, y)] = map[ch]; }); });
+  A[I(5, ROWS - 4)] = 2; A[I(6, ROWS - 4)] = 1;
+  S.deck = startingDeck(); S.bag = S.deck.map(c => c.uid);
+  S.next = { m: [[0,1,0],[1,1,1],[0,0,0]], mat: 'iron' };
+}
+recalcTraits(); seedDemo(); renderInv(); resize(); showOv(introHTML(false));
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
